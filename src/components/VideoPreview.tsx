@@ -1,6 +1,6 @@
-import React, { useRef, useEffect } from 'react';
-import { Play } from 'lucide-react';
-import { UI_COPY, THEME_CLASSES } from '../constants';
+import React, { useRef, useEffect } from "react";
+import { Play } from "lucide-react";
+import { UI_COPY, THEME_CLASSES } from "../constants";
 
 interface VideoPreviewProps {
   videoUrl: string;
@@ -13,18 +13,23 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({ videoUrl, fileName }) => {
   // Auto-play muted on load to show it works, then pause
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.play().then(() => {
-        setTimeout(() => {
-          if (videoRef.current) videoRef.current.pause();
-        }, 1500);
-      }).catch(() => {
-        // Autoplay prevented, standard behavior
-      });
+      videoRef.current
+        .play()
+        .then(() => {
+          setTimeout(() => {
+            if (videoRef.current) videoRef.current.pause();
+          }, 1500);
+        })
+        .catch(() => {
+          // Autoplay prevented, standard behavior
+        });
     }
   }, [videoUrl]);
 
   return (
-    <div className={`w-full overflow-hidden rounded-xl ${THEME_CLASSES.cardBg} animate-fade-in`}>
+    <div
+      className={`w-full overflow-hidden rounded-xl ${THEME_CLASSES.cardBg} animate-fade-in`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex items-center gap-2">
@@ -33,19 +38,21 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({ videoUrl, fileName }) => {
             {UI_COPY.preview.label}
           </span>
         </div>
-        <span className="text-xs text-neutral-500 truncate max-w-[150px]">{fileName}</span>
+        <span className="text-xs text-neutral-500 truncate max-w-[150px]">
+          {fileName}
+        </span>
       </div>
 
       {/* Video Area */}
       <div className="relative aspect-video bg-black group">
-        <video 
+        <video
           ref={videoRef}
-          src={videoUrl} 
+          src={videoUrl}
           className="w-full h-full object-contain"
           controls
           muted // Muted initially to allow autoplay preview
         />
-        
+
         {/* Overlay Decoration (Optional, only visible when paused/hovered ideally, but kept simple for now) */}
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center bg-black/10 group-hover:bg-black/0 transition-colors">
           {/* Controls are native, so we don't need a custom play button overlay blocking interaction */}
