@@ -183,7 +183,7 @@ const CloudUploadState: React.FC<CloudUploadStateProps> = ({
     }
   };
 
-  // Start upload on mount
+  // Start upload on mount or retry project creation if video already uploaded
   useEffect(() => {
     if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
       setStage("upload-failed");
@@ -191,7 +191,26 @@ const CloudUploadState: React.FC<CloudUploadStateProps> = ({
       return;
     }
 
-    uploadToCloudinary();
+    // Check if video is already uploaded (videoMetadata exists in localStorage)
+    const savedMetadata = localStorage.getItem("videoMetadata");
+
+    if (savedMetadata) {
+      try {
+        const videoMetadata: VideoMetadata = JSON.parse(savedMetadata);
+        // Video already uploaded, skip to project creation
+        setProgress(100);
+        setStage("upload-complete");
+        setStageText("Upload Complete");
+        createProjectInBackend(videoMetadata);
+      } catch (error) {
+        console.error("Error parsing saved metadata:", error);
+        // If metadata is corrupted, re-upload
+        uploadToCloudinary();
+      }
+    } else {
+      // No saved metadata, start fresh upload
+      uploadToCloudinary();
+    }
 
     // Cleanup on unmount
     return () => {

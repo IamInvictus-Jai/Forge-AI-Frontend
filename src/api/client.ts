@@ -32,12 +32,20 @@ export const createProject = async (
   videoMetadata: VideoMetadata,
 ): Promise<CreateProjectResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/project`, {
+    const response = await fetch(`${API_BASE_URL}/ingest/start`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(videoMetadata),
+      body: JSON.stringify({
+        video_url: videoMetadata.video_url,
+        metadata: {
+          width: videoMetadata.width,
+          height: videoMetadata.height,
+          duration: videoMetadata.duration,
+          aspectRatio: videoMetadata.aspectRatio,
+        },
+      }),
     });
 
     if (!response.ok) {
