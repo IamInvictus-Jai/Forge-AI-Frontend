@@ -1,66 +1,47 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import CloudUploadState from "../components/CloudUploadState";
 import Toast from "../components/Toast";
 
 const CloudUploadPage: React.FC = () => {
   const navigate = useNavigate();
-  const [fileName, setFileName] = useState<string>("video-project.mp4");
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const location = useLocation();
+  const [file, setFile] = useState<File | null>(null);
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({
     visible: false,
     message: "",
   });
 
   useEffect(() => {
-    // Get file info from sessionStorage
-    const savedFileName = sessionStorage.getItem("currentFileName");
-    const savedBlobUrl = sessionStorage.getItem("currentBlobUrl");
+    // Get file from navigation state
+    const stateFile = location.state?.file;
 
-    if (savedFileName) setFileName(savedFileName);
-    if (savedBlobUrl) setBlobUrl(savedBlobUrl);
-
-    // If no file info, redirect back to upload
-    if (!savedFileName || !savedBlobUrl) {
+    if (stateFile && stateFile instanceof File) {
+      setFile(stateFile);
+    } else {
+      // No file provided, redirect back to upload
       navigate("/");
     }
-  }, [navigate]);
+  }, [navigate, location]);
 
-  const handleUploadComplete = (backendVideoUrl: string) => {
-    // Store the blob URL in localStorage (for demo, since we don't have real backend)
-    // In production, use the backendVideoUrl from the server
-    if (blobUrl) {
-      localStorage.setItem("videoUrl", blobUrl);
-    }
-
-    // Create processing job
-    const newJobId = `job_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    localStorage.setItem("jobId", newJobId);
-
-    // Clear session storage
-    sessionStorage.removeItem("currentFileName");
-    sessionStorage.removeItem("currentBlobUrl");
-
+  const handleUploadComplete = () => {
     // Navigate to processing page
     navigate("/processing");
   };
 
   const handleUploadFail = () => {
-    // Clean up
-    if (blobUrl) {
-      URL.revokeObjectURL(blobUrl);
-    }
-    sessionStorage.removeItem("currentFileName");
-    sessionStorage.removeItem("currentBlobUrl");
-
     // Show error and navigate back
     setToast({ visible: true, message: "Video Upload Failed. Try again" });
     setTimeout(() => {
       navigate("/");
-    }, 2000);
+    }, 5000);
   };
 
-  if (!blobUrl) {
+  const handleBackToUpload = () => {
+    navigate("/");
+  };
+
+  if (!file) {
     return null; // Will redirect in useEffect
   }
 
@@ -74,9 +55,10 @@ const CloudUploadPage: React.FC = () => {
       )}
       <div className="h-full w-full flex items-center justify-center">
         <CloudUploadState
-          fileName={fileName}
+          file={file}
           onUploadComplete={handleUploadComplete}
           onUploadFail={handleUploadFail}
+          onBackToUpload={handleBackToUpload}
         />
       </div>
     </>

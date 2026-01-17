@@ -18,10 +18,15 @@ const UploadPage: React.FC = () => {
 
   // Load saved video URL from localStorage on mount
   useEffect(() => {
-    const url = localStorage.getItem("videoUrl");
-    if (url) {
-      setSavedVideoUrl(url);
-      setStatus("ready");
+    const savedMetadata = localStorage.getItem("videoMetadata");
+    if (savedMetadata) {
+      try {
+        const metadata = JSON.parse(savedMetadata);
+        setSavedVideoUrl(metadata.video_url);
+        setStatus("ready");
+      } catch (error) {
+        console.error("Error parsing videoMetadata:", error);
+      }
     }
   }, []);
 
@@ -48,8 +53,8 @@ const UploadPage: React.FC = () => {
 
   // Reset state when user clicks "Change Video"
   const handleReset = () => {
-    // Clear localStorage
-    localStorage.removeItem("videoUrl");
+    // Do not clear videoMetadata or jobId from localStorage
+    // They will be updated when new video is uploaded successfully
     setSavedVideoUrl(null);
 
     // Only revoke local blob URL
@@ -63,13 +68,9 @@ const UploadPage: React.FC = () => {
 
   // Handle continue to editor
   const handleContinueToEditor = () => {
-    if (file && localPreviewUrl) {
-      // Store file and blob URL in sessionStorage for cloud upload page
-      sessionStorage.setItem("currentFileName", file.name);
-      sessionStorage.setItem("currentBlobUrl", localPreviewUrl);
-
-      // Navigate to cloud upload page
-      navigate("/upload-cloud");
+    if (file) {
+      // Navigate to cloud upload page with file in state
+      navigate("/upload-cloud", { state: { file } });
     }
   };
 
