@@ -1,10 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { Cloud, CheckCircle2, Server, ShieldCheck, Zap, X } from "lucide-react";
+import {
+  Cloud,
+  CheckCircle2,
+  Server,
+  ShieldCheck,
+  Zap,
+  X,
+  Upload,
+} from "lucide-react";
 import Button from "./Button";
 
 interface CloudUploadStateProps {
   fileName: string;
-  onUploadComplete: () => void;
+  onUploadComplete: (videoUrl: string) => void;
   onUploadFail: () => void;
 }
 
@@ -18,23 +26,23 @@ const CloudUploadState: React.FC<CloudUploadStateProps> = ({
 
   const stages = [
     {
-      text: "Establishing secure connection...",
+      text: "Handshaking with server...",
       icon: <ShieldCheck className="w-5 h-5 text-orange-500" />,
     },
     {
-      text: "Compressing video assets...",
+      text: "Optimizing upload stream...",
       icon: <Zap className="w-5 h-5 text-orange-400" />,
     },
     {
-      text: "Uploading to cloud storage...",
-      icon: <Cloud className="w-5 h-5 text-orange-300" />,
+      text: "Transferring video data...",
+      icon: <Upload className="w-5 h-5 text-orange-300" />,
     },
     {
-      text: "Verifying integrity...",
+      text: "Finalizing storage...",
       icon: <Server className="w-5 h-5 text-orange-200" />,
     },
     {
-      text: "Ready for editing",
+      text: "Upload Complete",
       icon: <CheckCircle2 className="w-5 h-5 text-green-500" />,
     },
   ];
@@ -55,15 +63,16 @@ const CloudUploadState: React.FC<CloudUploadStateProps> = ({
 
         if (prev >= 100) {
           clearInterval(interval);
-          setTimeout(onUploadComplete, 800); // Small delay after 100% before switching
+          // MOCK BACKEND RESPONSE: Return a dummy URL
+          const mockBackendUrl = `https://mock-storage.forge-ai.com/uploads/${Date.now()}_${fileName}`;
+          setTimeout(() => onUploadComplete(mockBackendUrl), 800);
           return 100;
         }
 
-        // Variable speed to make it feel "real"
-        const increment = Math.random() * 3 + 0.5;
+        const increment = Math.random() * 4 + 1;
         return Math.min(prev + increment, 100);
       });
-    }, 50);
+    }, 100);
 
     return () => clearInterval(interval);
   }, [onUploadComplete, onUploadFail, fileName]);
@@ -73,7 +82,7 @@ const CloudUploadState: React.FC<CloudUploadStateProps> = ({
     if (progress < 15) setStage(0);
     else if (progress < 40) setStage(1);
     else if (progress < 80) setStage(2);
-    else if (progress < 95) setStage(3);
+    else if (progress < 99) setStage(3);
     else setStage(4);
   }, [progress]);
 
@@ -83,12 +92,11 @@ const CloudUploadState: React.FC<CloudUploadStateProps> = ({
       <div className="relative mb-12">
         {/* Pulsing Rings */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border border-orange-500/20 rounded-full animate-[spin_4s_linear_infinite]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 border border-orange-500/40 rounded-full border-t-transparent animate-[spin_2s_linear_infinite_reverse]" />
 
         {/* Center Percentage */}
-        <div className="relative w-32 h-32 flex items-center justify-center bg-neutral-900 rounded-full border border-neutral-800 shadow-[0_0_50px_rgba(255,85,0,0.15)] z-10">
-          <span className="font-bebas text-5xl text-white tracking-wider">
+        <div className="relative w-32 h-32 flex items-center justify-center bg-neutral-900 rounded-full border border-neutral-800 shadow-[0_0_50px_rgba(255,85,0,0.15)] z-10 group">
+          <Cloud className="absolute w-12 h-12 text-neutral-800 group-hover:text-neutral-700 transition-colors" />
+          <span className="relative font-bebas text-5xl text-white tracking-wider z-10">
             {Math.floor(progress)}%
           </span>
         </div>

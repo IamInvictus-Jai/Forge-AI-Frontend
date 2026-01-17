@@ -1,41 +1,115 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Zap } from "lucide-react";
 import UploadPage from "./pages/UploadPage";
 import CloudUploadPage from "./pages/CloudUploadPage";
+import VideoProcessingPage from "./pages/VideoProcessingPage";
 import EditorPage from "./pages/EditorPage";
 import Toast from "./components/Toast";
 
 // Types
-type PageView = "upload" | "cloud-upload" | "editor";
+type PageView = "upload" | "cloud-upload" | "processing" | "editor";
+type UploadStatus = "idle" | "uploading" | "processing" | "ready" | "error";
 
 const App = () => {
+  // Application State
   const [view, setView] = useState<PageView>("upload");
   const [currentFile, setCurrentFile] = useState<File | null>(null);
-  const [uploadStatus, setUploadStatus] = useState<
-    "idle" | "uploading" | "processing" | "ready" | "error"
-  >("idle");
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ visible: boolean; message: string }>({
     visible: false,
     message: "",
   });
 
-  // Handle Continue to Editor from Upload Page
-  const handleContinueToEditor = (file: File) => {
+  // -------------------------------------------------------------------------
+  // 1. Initialization & Persistence
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    // Check localStorage on mount
+    const savedVideoUrl = localStorage.getItem("videoUrl");
+    const savedJobId = localStorage.getItem("jobId");
+
+    if (savedVideoUrl) {
+      setVideoUrl(savedVideoUrl);
+      setUploadStatus("ready");
+    }
+
+    if (savedJobId) {
+      setJobId(savedJobId);
+    }
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // 2. Action Handlers
+  // -------------------------------------------------------------------------
+
+  // User clicked "Continue to Editor" from Upload Page -> Starts Cloud Upload
+  const handleContinueToCloudUpload = (file: File) => {
     setCurrentFile(file);
     setView("cloud-upload");
   };
 
-  // Cloud Upload Complete -> Go to Editor
-  const handleCloudUploadComplete = () => {
-    setView("editor");
+  // User clicked "Change Video" - Resets UI but maintains localStorage until new upload confirms
+  const handleChangeVideo = () => {
+    setCurrentFile(null);
+    setUploadStatus("idle");
+    // Note: We do NOT clear videoUrl from localStorage here
+    // It persists until a new upload succeeds
   };
 
-  // Cloud Upload Failed -> Go back to Upload Page with Error
+  // -------------------------------------------------------------------------
+  // 3. Flow Logic
+  // -------------------------------------------------------------------------
+
+  // Step 1 Complete: Cloud Upload Success
+  const handleCloudUploadComplete = (backendVideoUrl: string) => {
+    // 1. Store video URL in localStorage
+    localStorage.setItem("videoUrl", backendVideoUrl);
+    setVideoUrl(backendVideoUrl);
+
+    // 2. Mock Backend Request to Create Processing Job
+    const newJobId = `job_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    // 3. Store Job ID in localStorage
+    localStorage.setItem("jobId", newJobId);
+    setJobId(newJobId);
+
+    // 4. Route to Processing
+    setView("processing");
+  };
+
+  // Step 1 Failed: Cloud Upload Error
   const handleCloudUploadFail = () => {
     setCurrentFile(null);
     setUploadStatus("error");
     setView("upload");
     setToast({ visible: true, message: "Video Upload Failed. Try again" });
+  };
+
+  // Step 2 Complete: Job Processing Success (Backend says 'ready')
+  const handleJobComplete = () => {
+    // Clear job ID from localStorage (job is complete)
+    localStorage.removeItem("jobId");
+    setJobId(null);
+
+    // Route to Editor
+    setView("editor");
+  };
+
+  // Step 2 Failed: Job Processing Error (Backend says 'failed')
+  const handleJobFail = () => {
+    // Clear invalid job
+    localStorage.removeItem("jobId");
+    setJobId(null);
+
+    // Route back to upload page
+    setView("upload");
+    setUploadStatus("error");
+    setToast({
+      visible: true,
+      message: "Processing Failed. Please upload again.",
+    });
   };
 
   return (
@@ -73,8 +147,10 @@ const App = () => {
         {/* VIEW: UPLOAD PAGE */}
         {view === "upload" && (
           <UploadPage
-            onContinueToEditor={handleContinueToEditor}
+            onContinueToEditor={handleContinueToCloudUpload}
+            onChangeVideo={handleChangeVideo}
             initialStatus={uploadStatus}
+            savedVideoUrl={videoUrl}
           />
         )}
 
@@ -84,6 +160,15 @@ const App = () => {
             fileName={currentFile.name}
             onUploadComplete={handleCloudUploadComplete}
             onUploadFail={handleCloudUploadFail}
+          />
+        )}
+
+        {/* VIEW: VIDEO PROCESSING PAGE */}
+        {view === "processing" && jobId && (
+          <VideoProcessingPage
+            jobId={jobId}
+            onJobComplete={handleJobComplete}
+            onJobFail={handleJobFail}
           />
         )}
 

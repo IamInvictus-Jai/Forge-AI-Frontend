@@ -10,50 +10,59 @@ type AppStatus = "idle" | "uploading" | "processing" | "ready" | "error";
 
 interface UploadPageProps {
   onContinueToEditor: (file: File) => void;
+  onChangeVideo: () => void;
   initialStatus?: AppStatus;
+  savedVideoUrl: string | null;
 }
 
 const UploadPage: React.FC<UploadPageProps> = ({
   onContinueToEditor,
+  onChangeVideo,
   initialStatus = "idle",
+  savedVideoUrl,
 }) => {
   const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<AppStatus>(initialStatus);
+
+  // Use savedVideoUrl from localStorage if available
+  const previewUrl = savedVideoUrl || localPreviewUrl;
 
   // Handle file selection
   const handleFileSelect = (selectedFile: File) => {
     setStatus("uploading");
 
-    // Simulate upload delay for UX
+    // Simulate upload delay for local preview
     setTimeout(() => {
       setStatus("processing");
 
-      // Simulate processing delay
       setTimeout(() => {
         const url = URL.createObjectURL(selectedFile);
-        setPreviewUrl(url);
+        setLocalPreviewUrl(url);
         setFile(selectedFile);
         setStatus("ready");
       }, 800);
     }, 1200);
   };
 
-  // Reset state
+  // Reset state when user clicks "Change Video"
   const handleReset = () => {
+    if (localPreviewUrl && localPreviewUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(localPreviewUrl);
+    }
     setFile(null);
-    setPreviewUrl(null);
-    setStatus("idle");
+    setLocalPreviewUrl(null);
+    onChangeVideo();
   };
 
   // Cleanup object URL to prevent memory leaks
   useEffect(() => {
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+      if (localPreviewUrl && localPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(localPreviewUrl);
       }
     };
-  }, [previewUrl]);
+  }, [localPreviewUrl]);
 
   return (
     <div className="min-h-full w-full flex flex-col items-center justify-center py-20 md:py-24 animate-fade-in">
@@ -96,17 +105,20 @@ const UploadPage: React.FC<UploadPageProps> = ({
           className={`w-full max-w-2xl ${THEME_CLASSES.cardBg} rounded-2xl md:rounded-3xl p-1.5 shadow-2xl shadow-black/80 transition-all duration-500 animate-slide-up flex-shrink-0`}
           style={{ animationDelay: "0.4s" }}
         >
-          {status === "ready" && file && previewUrl ? (
-            // --- Preview State ---
+          {status === "ready" && previewUrl ? (
+            // --- Preview State (Uses localStorage URL or Local Blob) ---
             <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-              <VideoPreview videoUrl={previewUrl} fileName={file.name} />
+              <VideoPreview
+                videoUrl={previewUrl}
+                fileName={file?.name || "Project Video"}
+              />
 
               <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-1">
                 <div className="flex flex-col gap-1 text-center md:text-left">
                   <div className="flex items-center gap-2 justify-center md:justify-start text-neutral-300 font-medium">
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
                     <span className="text-sm font-display">
-                      Import Successful
+                      Ready for Upload
                     </span>
                   </div>
                   <p className="text-xs text-neutral-500 hidden md:block">

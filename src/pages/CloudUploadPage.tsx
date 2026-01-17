@@ -3,7 +3,7 @@ import CloudUploadState from "../components/CloudUploadState";
 
 interface CloudUploadPageProps {
   fileName: string;
-  onUploadComplete: () => void;
+  onUploadComplete: (videoUrl: string) => void;
   onUploadFail: () => void;
 }
 
