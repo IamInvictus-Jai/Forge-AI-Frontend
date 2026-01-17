@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sparkles, Scissors, Film, CheckCircle2 } from "lucide-react";
 import UploadZone from "../components/UploadZone";
 import VideoPreview from "../components/VideoPreview";
@@ -8,25 +9,25 @@ import { UI_COPY, THEME_CLASSES } from "../constants";
 // Types
 type AppStatus = "idle" | "uploading" | "processing" | "ready" | "error";
 
-interface UploadPageProps {
-  onContinueToEditor: (file: File) => void;
-  onChangeVideo: () => void;
-  initialStatus?: AppStatus;
-  savedVideoUrl: string | null;
-}
-
-const UploadPage: React.FC<UploadPageProps> = ({
-  onContinueToEditor,
-  onChangeVideo,
-  initialStatus = "idle",
-  savedVideoUrl,
-}) => {
+const UploadPage: React.FC = () => {
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
-  const [status, setStatus] = useState<AppStatus>(initialStatus);
+  const [status, setStatus] = useState<AppStatus>("idle");
+  const [savedVideoUrl, setSavedVideoUrl] = useState<string | null>(null);
 
-  // Use savedVideoUrl from localStorage if available
+  // Load saved video URL from localStorage on mount
+  useEffect(() => {
+    const url = localStorage.getItem("videoUrl");
+    if (url) {
+      setSavedVideoUrl(url);
+      setStatus("ready");
+    }
+  }, []);
+
+  // Preview URL logic: Use savedVideoUrl from localStorage if available, otherwise use local blob
   const previewUrl = savedVideoUrl || localPreviewUrl;
+  const hasVideo = !!previewUrl;
 
   // Handle file selection
   const handleFileSelect = (selectedFile: File) => {
@@ -47,12 +48,29 @@ const UploadPage: React.FC<UploadPageProps> = ({
 
   // Reset state when user clicks "Change Video"
   const handleReset = () => {
+    // Clear localStorage
+    localStorage.removeItem("videoUrl");
+    setSavedVideoUrl(null);
+
+    // Only revoke local blob URL
     if (localPreviewUrl && localPreviewUrl.startsWith("blob:")) {
       URL.revokeObjectURL(localPreviewUrl);
     }
     setFile(null);
     setLocalPreviewUrl(null);
-    onChangeVideo();
+    setStatus("idle");
+  };
+
+  // Handle continue to editor
+  const handleContinueToEditor = () => {
+    if (file && localPreviewUrl) {
+      // Store file and blob URL in sessionStorage for cloud upload page
+      sessionStorage.setItem("currentFileName", file.name);
+      sessionStorage.setItem("currentBlobUrl", localPreviewUrl);
+
+      // Navigate to cloud upload page
+      navigate("/upload-cloud");
+    }
   };
 
   // Cleanup object URL to prevent memory leaks
@@ -105,8 +123,8 @@ const UploadPage: React.FC<UploadPageProps> = ({
           className={`w-full max-w-2xl ${THEME_CLASSES.cardBg} rounded-2xl md:rounded-3xl p-1.5 shadow-2xl shadow-black/80 transition-all duration-500 animate-slide-up flex-shrink-0`}
           style={{ animationDelay: "0.4s" }}
         >
-          {status === "ready" && previewUrl ? (
-            // --- Preview State (Uses localStorage URL or Local Blob) ---
+          {status === "ready" && hasVideo ? (
+            // --- Preview State ---
             <div className="p-4 md:p-6 space-y-4 md:space-y-6">
               <VideoPreview
                 videoUrl={previewUrl}
@@ -118,7 +136,7 @@ const UploadPage: React.FC<UploadPageProps> = ({
                   <div className="flex items-center gap-2 justify-center md:justify-start text-neutral-300 font-medium">
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
                     <span className="text-sm font-display">
-                      Ready for Upload
+                      {savedVideoUrl ? "Video Ready" : "Ready for Upload"}
                     </span>
                   </div>
                   <p className="text-xs text-neutral-500 hidden md:block">
@@ -137,7 +155,8 @@ const UploadPage: React.FC<UploadPageProps> = ({
                   <Button
                     variant="primary"
                     icon={<Scissors className="w-4 h-4" />}
-                    onClick={() => file && onContinueToEditor(file)}
+                    onClick={handleContinueToEditor}
+                    disabled={!file || !localPreviewUrl}
                     className="w-full md:w-auto flex-1 md:flex-none"
                   >
                     {UI_COPY.preview.buttonContinue}

@@ -64,6 +64,8 @@ const CloudUploadState: React.FC<CloudUploadStateProps> = ({
         if (prev >= 100) {
           clearInterval(interval);
           // MOCK BACKEND RESPONSE: Return a dummy URL
+          // TODO: In production, replace this with actual backend cloud storage URL
+          // For now, this mock URL will be replaced with blob URL in App.tsx
           const mockBackendUrl = `https://mock-storage.forge-ai.com/uploads/${Date.now()}_${fileName}`;
           setTimeout(() => onUploadComplete(mockBackendUrl), 800);
           return 100;

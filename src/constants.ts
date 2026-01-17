@@ -2,8 +2,9 @@
 export const UI_COPY = {
   landing: {
     title: "Edit videos intelligently, right in your browser",
-    subtitle: "No installs. Upload once, let AI handle captions, animations, framing, and effects — instantly.",
-    footer: "Powered for speed • Built for simplicity"
+    subtitle:
+      "No installs. Upload once, let AI handle captions, animations, framing, and effects — instantly.",
+    footer: "Powered for speed • Built for simplicity",
   },
   upload: {
     buttonPrimary: "Upload Video",
@@ -21,15 +22,26 @@ export const UI_COPY = {
     uploading: "Uploading video…",
     processing: "Preparing your video…",
     error: "Something went wrong. Try another file.",
-  }
+  },
+  export: {
+    title: "Export Project",
+    successTitle: "Video Exported Successfully",
+    renderingTitle: "Rendering Video...",
+    cancel: "Cancel Export",
+    start: "Start Render",
+    download: "Download Video",
+    close: "Close",
+  },
 };
 
 // Configurable Theme Classes
 export const THEME_CLASSES = {
   // Primary Color: Orange
-  primaryButton: "bg-brand-orange hover:bg-orange-600 text-white shadow-[0_0_20px_rgba(255,85,0,0.3)] hover:shadow-[0_0_30px_rgba(255,85,0,0.5)] transition-all duration-300",
+  primaryButton:
+    "bg-brand-orange hover:bg-orange-600 text-white shadow-[0_0_20px_rgba(255,85,0,0.3)] hover:shadow-[0_0_30px_rgba(255,85,0,0.5)] transition-all duration-300",
   // Secondary Color: Dark Grays
-  secondaryButton: "bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700",
+  secondaryButton:
+    "bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700",
   // Accent Color: White (Used for text emphasis and borders)
   accentBorder: "border-white/10 hover:border-white/20",
   accentText: "text-white",

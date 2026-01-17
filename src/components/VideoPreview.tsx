@@ -50,13 +50,16 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({ videoUrl, fileName }) => {
           src={videoUrl}
           className="w-full h-full object-contain"
           controls
-          muted // Muted initially to allow autoplay preview
+          muted
+          playsInline
+          preload="metadata"
+          onError={(e) => {
+            console.error("Video load error:", e);
+          }}
         />
 
-        {/* Overlay Decoration (Optional, only visible when paused/hovered ideally, but kept simple for now) */}
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center bg-black/10 group-hover:bg-black/0 transition-colors">
-          {/* Controls are native, so we don't need a custom play button overlay blocking interaction */}
-        </div>
+        {/* Overlay Decoration */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center bg-black/10 group-hover:bg-black/0 transition-colors"></div>
       </div>
 
       {/* Footer Status */}
