@@ -14,9 +14,13 @@ import {
   Sparkles,
   MonitorPlay,
   Minimize,
+  RefreshCw,
 } from "lucide-react";
 import Button from "../components/Button";
 import ExportModal from "../components/ExportModal";
+import VideoRenderer from "../components/VideoRenderer";
+import { mockConfig, VideoConfig } from "../data/mockConfig";
+import { useAnimationStyles } from "../hooks/useAnimationStyles";
 
 // --- Helper Components ---
 
@@ -60,12 +64,16 @@ const ChatMessage: React.FC<{ role: "ai" | "user"; text: string }> = ({
 // --- Main Component ---
 
 const EditorPage: React.FC = () => {
+  // Inject animation styles
+  useAnimationStyles();
+
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
 
   // State
+  const [config, setConfig] = useState<VideoConfig | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>("");
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -81,7 +89,11 @@ const EditorPage: React.FC = () => {
   // Modal State
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // Toggles State
+  // Refresh state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Toggles State - Initialize from config
   const [toggles, setToggles] = useState({
     captions: true,
     animatedCaptions: false,
@@ -101,11 +113,51 @@ const EditorPage: React.FC = () => {
     },
   ]);
 
-  // Load Video
+  // Load Config and Video
   useEffect(() => {
-    const url = localStorage.getItem("videoUrl");
-    if (url) setVideoUrl(url);
-  }, []);
+    // TODO: Replace with actual API call when backend is ready
+    // const fetchConfig = async () => {
+    //   const response = await fetch(`${API_BASE_URL}/project/${projectId}`);
+    //   const data = await response.json();
+    //   setConfig(data);
+    // };
+    // fetchConfig();
+
+    // For now, use mock config
+    const loadedConfig = { ...mockConfig };
+    setConfig(loadedConfig);
+    setVideoUrl(loadedConfig.source.video.url);
+
+    // Initialize toggles from config settings
+    setToggles({
+      captions: loadedConfig.settings.autoCaptions,
+      animatedCaptions: loadedConfig.settings.dynamicAnimations,
+      emphasisWords: loadedConfig.settings.highlightKeywords,
+      fadeIn: loadedConfig.settings.introFadeIn,
+      fadeOut: loadedConfig.settings.outroFadeOut,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]); // Re-run when refreshKey changes
+
+  // Update config when toggles change
+  useEffect(() => {
+    if (!config) return;
+
+    setConfig((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        settings: {
+          ...prev.settings,
+          autoCaptions: toggles.captions,
+          dynamicAnimations: toggles.animatedCaptions,
+          highlightKeywords: toggles.emphasisWords,
+          introFadeIn: toggles.fadeIn,
+          outroFadeOut: toggles.fadeOut,
+        },
+      };
+    });
+  }, [toggles]);
 
   // --- Smooth Playback Logic (rAF) ---
   useEffect(() => {
@@ -205,10 +257,14 @@ const EditorPage: React.FC = () => {
     if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause();
+        setIsPlaying(false);
       } else {
-        videoRef.current.play();
+        videoRef.current.play().catch((error) => {
+          // Ignore play errors (e.g., interrupted by pause)
+          console.log("Play interrupted:", error);
+        });
+        setIsPlaying(true);
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -284,6 +340,29 @@ const EditorPage: React.FC = () => {
     setTimeout(() => setAiStatus("Undo complete"), 800);
   };
 
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setAiStatus("Refreshing preview with updated config...");
+
+    // Pause video during refresh
+    if (videoRef.current && !videoRef.current.paused) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    }
+
+    // Trigger config reload by incrementing refreshKey
+    setTimeout(() => {
+      setRefreshKey((prev) => prev + 1);
+      setIsRefreshing(false);
+      setAiStatus("Preview refreshed successfully");
+
+      // Clear status after 2 seconds
+      setTimeout(() => {
+        setAiStatus("AI is ready for instructions");
+      }, 2000);
+    }, 500);
+  };
+
   return (
     <div className="flex flex-col h-full w-full bg-[#0a0a0a] text-white overflow-hidden font-sans">
       {/* Export Modal */}
@@ -304,6 +383,18 @@ const EditorPage: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4">
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-neutral-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh preview with updated config"
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </button>
+
           <button
             onClick={handleUndo}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-neutral-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
@@ -357,14 +448,17 @@ const EditorPage: React.FC = () => {
               </div>
             )}
 
-            {videoUrl && (
-              <video
-                ref={videoRef}
-                src={videoUrl}
-                className={`max-h-full max-w-full shadow-2xl rounded-sm ${isFullscreen ? "h-full w-full object-contain" : ""}`}
+            {videoUrl && config && (
+              <VideoRenderer
+                config={config}
+                videoUrl={videoUrl}
+                currentTime={currentTime}
+                isPlaying={isPlaying}
+                videoRef={videoRef}
                 onLoadedMetadata={handleLoadedMetadata}
                 onEnded={handleVideoEnded}
-                onClick={togglePlay}
+                onTogglePlay={togglePlay}
+                isFullscreen={isFullscreen}
               />
             )}
 
